@@ -23,7 +23,7 @@ class BookControllerIT(
 
     test("rest route get books") {
         // GIVEN
-        every { bookUseCase.getAllBooks() } returns listOf(Book("A", "B"))
+        every { bookUseCase.getAllBooks() } returns listOf(Book("A", "B", false))
 
         // WHEN
         mockMvc.get("/books")
@@ -38,7 +38,8 @@ class BookControllerIT(
                         [
                           {
                             "name": "A",
-                            "author": "B"
+                            "author": "B",
+                            "reserved": false
                           }
                         ]
                         """.trimIndent()
@@ -55,7 +56,8 @@ class BookControllerIT(
             content = """
                 {
                   "name": "Les misérables",
-                  "author": "Victor Hugo"
+                  "author": "Victor Hugo",
+                  "reserved": false
                 }
             """.trimIndent()
             contentType = APPLICATION_JSON
@@ -66,7 +68,8 @@ class BookControllerIT(
 
         val expected = Book(
             name = "Les misérables",
-            author = "Victor Hugo"
+            author = "Victor Hugo",
+            reserved = false
         )
 
         verify(exactly = 1) { bookUseCase.addBook(expected) }
@@ -80,7 +83,8 @@ class BookControllerIT(
             content = """
                 {
                   "title": "Les misérables",
-                  "author": "Victor Hugo"
+                  "author": "Victor Hugo",
+                  "reserved": false
                 }
             """.trimIndent()
             contentType = APPLICATION_JSON
@@ -90,5 +94,15 @@ class BookControllerIT(
         }
 
         verify(exactly = 0) { bookUseCase.addBook(any()) }
+    }
+
+    test("rest route reserve book should return 200") {
+        justRun { bookUseCase.reserveBookByTitle("Les misérables") }
+
+        mockMvc.get("/books/Les misérables/reserve") {
+            contentType = APPLICATION_JSON
+        }.andExpect {
+            status { isOk() }
+        }
     }
 })

@@ -9,6 +9,7 @@ import io.kotest.extensions.spring.SpringExtension
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.nulls.shouldNotBeNull
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import org.springframework.boot.test.context.SpringBootTest
@@ -36,11 +37,11 @@ class BookDAOIT(
             performQuery(
                 // language=sql
                 """
-               insert into book (title, author)
+               insert into book (title, author, reserved)
                values 
-                   ('Hamlet', 'Shakespeare'),
-                   ('Les fleurs du mal', 'Beaudelaire'),
-                   ('Harry Potter', 'Rowling');
+                   ('Hamlet', 'Shakespeare', false),
+                   ('Les fleurs du mal', 'Beaudelaire', false),
+                   ('Harry Potter', 'Rowling', true);
             """.trimIndent()
             )
 
@@ -49,14 +50,14 @@ class BookDAOIT(
 
             // THEN
             res.shouldContainExactlyInAnyOrder(
-                Book("Hamlet", "Shakespeare"), Book("Les fleurs du mal", "Beaudelaire"), Book("Harry Potter", "Rowling")
+                Book("Hamlet", "Shakespeare", false), Book("Les fleurs du mal", "Beaudelaire", false), Book("Harry Potter", "Rowling", true)
             )
         }
 
         test("create book in db") {
             // GIVEN
             // WHEN
-            bookDAO.createBook(Book("Les misérables", "Victor Hugo"))
+            bookDAO.createBook(Book("Les misérables", "Victor Hugo", false))
 
             // THEN
             val res = performQuery(
@@ -69,6 +70,54 @@ class BookDAOIT(
                 this["id"].shouldNotBeNull().shouldBeInstanceOf<Int>()
                 this["title"].shouldBe("Les misérables")
                 this["author"].shouldBe("Victor Hugo")
+                this["reserved"].shouldBe(false)
+            }
+        }
+
+        test("Should get book by title") {
+            // GIVEN
+            performQuery(
+                // language=sql
+                """
+               insert into book (title, author, reserved)
+               values 
+                   ('Hamlet', 'Shakespeare', false)
+            """.trimIndent()
+            )
+            // WHEN
+            assertSoftly(bookDAO.getBookByTitle("Hamlet")) {
+                this.shouldNotBeNull()
+                this.name shouldBe "Hamlet"
+                this.author shouldBe "Shakespeare"
+                this.reserved shouldBe false
+            }
+        }
+
+        test("Should update reserved property of book") {
+            // GIVEN
+            performQuery(
+                // language=sql
+                """
+               insert into book (title, author, reserved)
+               values 
+                   ('Hamlet', 'Shakespeare', false)
+            """.trimIndent()
+            )
+            // WHEN
+            bookDAO.reserveBookByTitle("Hamlet")
+
+            // THEN
+            val res = performQuery(
+                // language=sql
+                "SELECT * FROM book WHERE title = 'Hamlet'"
+            )
+
+            res shouldHaveSize 1
+            assertSoftly(res.first()) {
+                this["id"].shouldNotBeNull().shouldBeInstanceOf<Int>()
+                this["title"].shouldBe("Hamlet")
+                this["author"].shouldBe("Shakespeare")
+                this["reserved"].shouldBe(true)
             }
         }
 

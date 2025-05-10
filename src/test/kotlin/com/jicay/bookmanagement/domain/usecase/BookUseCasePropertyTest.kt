@@ -19,6 +19,18 @@ class InMemoryBookPort : BookPort {
         books.add(book)
     }
 
+    override fun getBookByTitle(title: String): Book? {
+        return books.find { it.name == title }
+    }
+
+    override fun reserveBookByTitle(title: String) {
+        val book = getBookByTitle(title)
+        if (book != null) {
+            books.remove(book)
+            books.add(book.copy(reserved = true))
+        }
+    }
+
     fun clear() {
         books.clear()
     }
@@ -40,7 +52,7 @@ class BookUseCasePropertyTest : FunSpec({
             for (i in 1..nbItems) {
                 val title = arb.next()
                 titles.add(title)
-                bookUseCase.addBook(Book(title, "Victor Hugo"))
+                bookUseCase.addBook(Book(title, "Victor Hugo", false))
             }
 
             val res = bookUseCase.getAllBooks()
